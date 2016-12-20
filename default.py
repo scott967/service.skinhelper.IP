@@ -7,16 +7,11 @@ import sys
 import socket
 import json
 import time
-from multiprocessing import Process
 import threading
 import os
 import xbmcgui
 import time
 import urllib2
-from threading import Timer, Lock
-from threading import Thread, Event
-
-
 
 __addon__               = xbmcaddon.Addon()
 __addon_id__            = __addon__.getAddonInfo('id')
@@ -25,62 +20,6 @@ __icon__                = __addon__.getAddonInfo('icon')
 __addonpath__           = xbmc.translatePath(__addon__.getAddonInfo('path')).decode('utf-8')
 __settings__            = xbmcaddon.Addon(id="service.skinhelper.IP")
 WINDOW = xbmcgui.Window(10000)
-
-
-class TimerClass(threading.Thread):
-
-    def GetItem(abwo,iinputstring,kkkk):
-        output = iinputstring.split('"Value": "')
-        output2 = output[kkkk]
-        output3 = output2.split('", ')
-        output4 = output3[0].replace(' ','')
-        return output4.strip()
-    
-    def __init__(self):
-        threading.Thread.__init__(self)
-        self.event = threading.Event()
-        self.count = 1
-
-    def run(self):
-        while self.count > 0 and not self.event.is_set():
-            self.count += 1
-            self.event.wait(0.5)
-            if self.count == 10:
-                self.count = 1
-                try:
-                      url="http://127.0.0.1:9900/data.json"
-                      page =urllib2.urlopen(url)
-                      data=page.read()
-                      # print(data)
-                      #output = data.split('"Value": "')
-                      # CPU temp
-                      temp1 = self.GetItem(data,31)
-                      # GPU temp
-                      temp2 = self.GetItem(data,52)
-                      # CPU load
-                      temp3 = self.GetItem(data,33)
-                      # GPU load core
-                      temp4 = self.GetItem(data,54)
-                      # GPU load video engine
-                      temp5 = self.GetItem(data,56)
-                      
-                      WINDOW.setProperty("SkinHelperIP.cputemp",temp1)
-                      WINDOW.setProperty("SkinHelperIP.gputemp",temp2)
-                      WINDOW.setProperty("SkinHelperIP.cpulast",temp3)
-                      WINDOW.setProperty("SkinHelperIP.gpulast",temp4)
-                      WINDOW.setProperty("SkinHelperIP.gpulastengine",temp5)
-                      
-                      
-                except socket.error, msg:
-                      xbmc.log("IP Helper:" + str(msg[0]) + ' , Error message : ' + msg[1], level=xbmc.LOGNOTICE)
-                        
-                
-
-    def stop(self):
-        self.count = 0
-        self.event.set()
-        self.count = 0
-        
 
 class MyAddon:
     def GetItem(abwo,iinputstring,kkkk):
@@ -95,9 +34,6 @@ class MyAddon:
             url="https://api.ipify.org/"
             page =urllib2.urlopen(url)
             data=page.read()
-            #print(data)
-            #xbmc.log(str(data))
-            #self.Msg(data)
             return str(data)
          except Exception as ex:
             self.Msg(str(ex))
@@ -142,12 +78,6 @@ class MyAddon:
                 except Exception , msg:
                       xbmc.log("IP Helper:" + str(msg[0]) + ' , Error message : ' + msg[1], level=xbmc.LOGNOTICE)
                         
-             
-             
-         
-         
-         
-         
     def Msg(self,mss):
          note = '{"id":1,"jsonrpc":"2.0","method":"GUI.ShowNotification","params":{"title":"IP","message":"' + mss + '"}}'
          result = xbmc.executeJSONRPC(note)
@@ -159,12 +89,6 @@ class MyAddon:
 
 
 xbmc.log("IP Helper service: start", level=xbmc.LOGNOTICE)
-#tmr = TimerClass()
-#tmr.start()
 MyAddon()
-
-#while(not xbmc.abortRequested):
-#    xbmc.sleep(100)
-#tmr.stop()
 xbmc.log("IP Helper service: stop", level=xbmc.LOGNOTICE)
      
