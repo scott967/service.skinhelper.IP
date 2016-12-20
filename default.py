@@ -2,15 +2,10 @@
 
 import xbmc
 import xbmcaddon
-import subprocess
 import sys
-import socket
 import json
-import time
-import threading
 import os
 import xbmcgui
-import time
 import urllib2
 
 __addon__               = xbmcaddon.Addon()
