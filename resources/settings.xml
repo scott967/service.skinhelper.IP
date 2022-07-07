@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<settings version="1">
+	<section id="service.skinhelper.ID">
+		<category id="General" label="32001">
+			<group id="1">
+				<setting label="32002" type="integer" id="update_interval">
+					<level>1</level>
+					<default>10</default>
+					<constraints>
+						<minimum>5</minimum>
+						<step>5</step>
+						<maximum>60</maximum>
+					</constraints>
+					<control type="slider" format="integer"/>
+				</setting>
+			</group>
+		</category>
+	</section>
+</settings>
