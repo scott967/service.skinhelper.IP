@@ -22,9 +22,13 @@ __addon_id__            = __addon__.getAddonInfo('id')
 __addonname__           = __addon__.getAddonInfo('name')
 __icon__                = __addon__.getAddonInfo('icon')
 __addonpath__           = xbmcvfs.translatePath(__addon__.getAddonInfo('path'))
+__addonprofile__        = xbmcvfs.translatePath(__addon__.getAddonInfo('profile'))
+xbmc.log(f'{__addonname__}: profile path: {__addonprofile__}', level=xbmc.LOGDEBUG)
 WINDOW = xbmcgui.Window(10000)
 UPDATE_INTERVAL = __addon__.getSettingInt('update_interval')
 OHM_PORT = __addon__.getSettingInt('OHM_port')
+SHORT_VALUE = __addon__.getSettingBool('Short_value')
+ENABLE_DEBUG = __addon__.getSettingBool('Enable_debug')
 
 class MyMonitor(xbmc.Monitor):
     """Wraps Kodi Monitor class to monitor settings
@@ -37,8 +41,12 @@ class MyMonitor(xbmc.Monitor):
         """updates the update interval when user changes the setting"""
         global UPDATE_INTERVAL
         global OHM_PORT
+        global SHORT_VALUE
+        global ENABLE_DEBUG
         UPDATE_INTERVAL = __addon__.getSettingInt('update_interval')
         OHM_PORT = __addon__.getSettingInt('OHM_port')
+        SHORT_VALUE = __addon__.getSettingBool('Short_value')
+        ENABLE_DEBUG = __addon__.getSettingBool('Enable_debug')
 
 class MyAddon:
     """class provides all the functions for the addon
@@ -48,12 +56,11 @@ class MyAddon:
         """
         monitor = MyMonitor()
         GET_SENSORS = __addon__.getSettingBool('get_sensors')
-        if GET_SENSORS or not os.path.exists(os.path.join(__addonpath__, 'sensorlist.json')):
+        if GET_SENSORS or not os.path.exists(os.path.join(__addonprofile__, 'sensorlist.json')):
             self.update_sensors()
             __addon__.setSettingBool('get_sensors', False)
-        with open(os.path.join(__addonpath__, 'sensorlist.json'), 'rb') as json_sensor:
+        with open(os.path.join(__addonprofile__, 'sensorlist.json'), 'rb') as json_sensor:
             activesensorlist = json.load(json_sensor)
-
         wip = self.get_wan_ip()
         lanip = self.get_system_ip()
         xbmc.log(f"{__addonname__} ---->WANIP:{wip}", level=xbmc.LOGINFO)
@@ -68,7 +75,7 @@ class MyAddon:
         monitored sensors are saved to sensorlist.json as a serialized list of sensor ids,
         """
         try:
-            with open(os.path.join(__addonpath__, 'sensorlist.json'), 'w') as json_sensor:
+            with open(os.path.join(__addonprofile__, 'sensorlist.json'), 'w') as json_sensor:
                 url = f"http://127.0.0.1:{OHM_PORT}/data.json"
                 with urllib.request.urlopen(url) as page:
                     data = page.read().decode('utf-8')
@@ -79,7 +86,8 @@ class MyAddon:
                 for sensor in sensorlist:
                     new_sensor = f'id {sensor["id"]} -- {sensor["Text"]}'
                     sensorlist_as_string.append(new_sensor)
-                xbmc.log(f'{__addonname__}: update num sensors: {len(sensorlist)} sensorlist {sensorlist}', level=xbmc.LOGDEBUG)
+                if ENABLE_DEBUG:
+                    xbmc.log(f'{__addonname__}: update num sensors: {len(sensorlist)} sensorlist {sensorlist}', level=xbmc.LOGDEBUG)
                 active_sensors_index = xbmcgui.Dialog().multiselect(
                                         __addon__.getLocalizedString(32004),
                                         sensorlist_as_string)
@@ -104,7 +112,7 @@ class MyAddon:
         except Exception as ex:
             self.notify_msg(f'{ex}')
 
-    def traverse_tree(self, tree: dict, sensorlist: list) -> list:
+    def traverse_tree(self, tree: dict, sensorlist: list, parent_text = '') -> list:
         """traverses over the OHM sensor tree dict to retrieve sensor id, text,
         and value for each node
 
@@ -116,13 +124,15 @@ class MyAddon:
             list: the updated sensor list
         """
         if tree['Children'] == []:
-            node = {'id':tree['id'], 'Text':tree['Text'], 'Value':tree['Value']}
+            node = {'id':tree['id'], 'Text':(parent_text + tree['Text']), 'Value':tree['Value']}
             sensorlist.append(node)
             #xbmc.log(f'{__addonname__}: node {node} type {type(sensorlist)} sensors: {len(sensorlist)} {sensorlist}', level=xbmc.LOGDEBUG)
             return sensorlist
         else:
+            parent_text = tree.get('Text', '') + ' - '
+            #xbmc.log(f'{__addonname__}: parent text {parent_text}', level=xbmc.LOGDEBUG)
             for child in tree['Children']:
-                sensorlist = self.traverse_tree(child, sensorlist)
+                sensorlist = self.traverse_tree(child, sensorlist, parent_text)
             return sensorlist
 
     def runner(self, monitor, activesensorlist):
@@ -141,20 +151,25 @@ class MyAddon:
                 #xbmc.log(f'{__addonname__}: data2 {data2}', level=xbmc.LOGDEBUG)
                 sensorlist = []
                 sensorlist = self.traverse_tree(data2, sensorlist)
-                xbmc.log(f'{__addonname__}: runner sensorlist {sensorlist} activesensorlist {activesensorlist}', level=xbmc.LOGDEBUG)
+                if ENABLE_DEBUG:
+                    xbmc.log(f'{__addonname__}: runner sensorlist {sensorlist} activesensorlist {activesensorlist}', level=xbmc.LOGDEBUG)
                 sensordata = []
                 for id_sensor in activesensorlist:
                     for index in sensorlist:
                         if index['id'] == id_sensor:
-                            sensordata.append(f'{index["Text"]} {index["Value"]}')
-                xbmc.log(f'{__addonname__}: sensordata {sensordata}',
-                            level=xbmc.LOGDEBUG)
+                            if SHORT_VALUE:
+                                sensordata.append(f'{index["Value"]}')
+                            else:
+                                sensordata.append(f'{index["Text"]} {index["Value"]}')
+                if ENABLE_DEBUG:
+                    xbmc.log(f'{__addonname__}: sensordata {sensordata}',
+                                level=xbmc.LOGDEBUG)
                 for count, sensor_value in enumerate(sensordata):
                     WINDOW.setProperty(f'SkinHelperIP.sensor{count}', sensor_value)
             except Exception as exc_msg:
                 xbmc.log(f'{__addonname__}: exc message {exc_msg}',
                             level=xbmc.LOGDEBUG)
-                monitor.waitForAbort(UPDATE_INTERVAL)
+            monitor.waitForAbort(UPDATE_INTERVAL)
 
     def notify_msg(self,mss: str):
         """Shows a Kodi notification dialog using JSON-RPC

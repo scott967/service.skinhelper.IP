@@ -32,3 +32,10 @@ msgctxt "#32004"
 msgid "Select OHM sensors to monitor"
 msgstr ""
 
+msgctxt "#32005"
+msgid "Use short values"
+msgstr ""
+
+msgctxt "#32006"
+msgid "Enable debug logging"
+msgstr ""
