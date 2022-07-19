@@ -6,6 +6,8 @@ __init__ constructor method
 """
 
 
+import json
+import os.path
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -22,6 +24,7 @@ __icon__                = __addon__.getAddonInfo('icon')
 __addonpath__           = xbmcvfs.translatePath(__addon__.getAddonInfo('path'))
 WINDOW = xbmcgui.Window(10000)
 UPDATE_INTERVAL = __addon__.getSettingInt('update_interval')
+OHM_PORT = __addon__.getSettingInt('OHM_port')
 
 class MyMonitor(xbmc.Monitor):
     """Wraps Kodi Monitor class to monitor settings
@@ -33,7 +36,9 @@ class MyMonitor(xbmc.Monitor):
     def onSettingsChanged(self):
         """updates the update interval when user changes the setting"""
         global UPDATE_INTERVAL
+        global OHM_PORT
         UPDATE_INTERVAL = __addon__.getSettingInt('update_interval')
+        OHM_PORT = __addon__.getSettingInt('OHM_port')
 
 class MyAddon:
     """class provides all the functions for the addon
@@ -42,29 +47,48 @@ class MyAddon:
         """class constructor executes class instance
         """
         monitor = MyMonitor()
+        GET_SENSORS = __addon__.getSettingBool('get_sensors')
+        if GET_SENSORS or not os.path.exists(os.path.join(__addonpath__, 'sensorlist.json')):
+            self.update_sensors()
+            __addon__.setSettingBool('get_sensors', False)
+        with open(os.path.join(__addonpath__, 'sensorlist.json'), 'rb') as json_sensor:
+            activesensorlist = json.load(json_sensor)
+
         wip = self.get_wan_ip()
         lanip = self.get_system_ip()
         xbmc.log(f"{__addonname__} ---->WANIP:{wip}", level=xbmc.LOGINFO)
         xbmc.log(f"{__addonname__} ---->LANIP:{lanip}", level=xbmc.LOGINFO)
         WINDOW.setProperty("SkinHelperIP.wanip",wip)
         WINDOW.setProperty("SkinHelperIP.lanip",lanip)
-        self.runner(monitor)
+        self.runner(monitor, activesensorlist)
 
-    def get_item(self, iinputstring: str, kkkk: int) -> str:
-        """parses the iinputstring and returns requested sensor item value
-
-        Args:
-            iinputstring (str): results from OHMV
-            kkkk (int): sensor item
-
-        Returns:
-            str: sensor value
+    def update_sensors(self):
+        """gets the active sensors from OHM as a list of dicts and opens a multi-
+        select dialog to allow the user to select which sensors to monitor.  The
+        monitored sensors are saved to sensorlist.json as a serialized list of sensor ids,
         """
-        output = iinputstring.split('"Value": "')
-        output2 = output[kkkk]
-        output3 = output2.split('", ')
-        output4 = output3[0].replace(' ','')
-        return output4.strip()
+        try:
+            with open(os.path.join(__addonpath__, 'sensorlist.json'), 'w') as json_sensor:
+                url = f"http://127.0.0.1:{OHM_PORT}/data.json"
+                with urllib.request.urlopen(url) as page:
+                    data = page.read().decode('utf-8')
+                data = json.loads(data)
+                sensorlist = []
+                sensorlist = self.traverse_tree(data, sensorlist)
+                sensorlist_as_string = []
+                for sensor in sensorlist:
+                    new_sensor = f'id {sensor["id"]} -- {sensor["Text"]}'
+                    sensorlist_as_string.append(new_sensor)
+                xbmc.log(f'{__addonname__}: update num sensors: {len(sensorlist)} sensorlist {sensorlist}', level=xbmc.LOGDEBUG)
+                active_sensors_index = xbmcgui.Dialog().multiselect(
+                                        __addon__.getLocalizedString(32004),
+                                        sensorlist_as_string)
+                active_sensors = []
+                for index in active_sensors_index:
+                    active_sensors.append(sensorlist[index]['id'])
+                json.dump(active_sensors, json_sensor)
+        except Exception as ex:
+            self.notify_msg(f'udate sensor list fail {ex}')
 
     def get_wan_ip(self) -> str:
         """helper method finds your outward-facing WAN IP addr using ipify
@@ -80,34 +104,57 @@ class MyAddon:
         except Exception as ex:
             self.notify_msg(f'{ex}')
 
-    def runner(self, monitor):
+    def traverse_tree(self, tree: dict, sensorlist: list) -> list:
+        """traverses over the OHM sensor tree dict to retrieve sensor id, text,
+        and value for each node
+
+        Args:
+            tree (dict): a dict with 0 or more children as a list
+            sensorlist (list): the list of sensors, each sensor is a dict
+
+        Returns:
+            list: the updated sensor list
+        """
+        if tree['Children'] == []:
+            node = {'id':tree['id'], 'Text':tree['Text'], 'Value':tree['Value']}
+            sensorlist.append(node)
+            #xbmc.log(f'{__addonname__}: node {node} type {type(sensorlist)} sensors: {len(sensorlist)} {sensorlist}', level=xbmc.LOGDEBUG)
+            return sensorlist
+        else:
+            for child in tree['Children']:
+                sensorlist = self.traverse_tree(child, sensorlist)
+            return sensorlist
+
+    def runner(self, monitor, activesensorlist):
         """daemon runs with default 10 sec update until Kodi exits
+
+        Args:
+            monitor (xbmc.Monitor): a monitor to check for exit
+            activesensorlist (list): a list of int of 0-5 sensors to minitor
         """
         while not monitor.abortRequested():
             try:
-                url = "http://127.0.0.1:9900/data.json"
+                url = f"http://127.0.0.1:{OHM_PORT}/data.json"
                 with urllib.request.urlopen(url) as page:
                     data = page.read().decode('utf-8')
-                # print(data)
-                #output = data.split('"Value": "')
-                # CPU temp
-                temp1 = self.get_item(data,20)
-                # GPU temp
-                temp2 = self.get_item(data,38)
-                # CPU load
-                temp3 = self.get_item(data,22)
-                # GPU load core
-                temp4 = self.get_item(data,40)
-                # GPU load video engine
-                temp5 = self.get_item(data,40)
-                WINDOW.setProperty("SkinHelperIP.cputemp",temp1)
-                WINDOW.setProperty("SkinHelperIP.gputemp",temp2)
-                WINDOW.setProperty("SkinHelperIP.cpulast",temp3)
-                WINDOW.setProperty("SkinHelperIP.gpulast",temp4)
-                WINDOW.setProperty("SkinHelperIP.gpulastengine",temp5)
+                data2 = json.loads(data)
+                #xbmc.log(f'{__addonname__}: data2 {data2}', level=xbmc.LOGDEBUG)
+                sensorlist = []
+                sensorlist = self.traverse_tree(data2, sensorlist)
+                xbmc.log(f'{__addonname__}: runner sensorlist {sensorlist} activesensorlist {activesensorlist}', level=xbmc.LOGDEBUG)
+                sensordata = []
+                for id_sensor in activesensorlist:
+                    for index in sensorlist:
+                        if index['id'] == id_sensor:
+                            sensordata.append(f'{index["Text"]} {index["Value"]}')
+                xbmc.log(f'{__addonname__}: sensordata {sensordata}',
+                            level=xbmc.LOGDEBUG)
+                for count, sensor_value in enumerate(sensordata):
+                    WINDOW.setProperty(f'SkinHelperIP.sensor{count}', sensor_value)
             except Exception as exc_msg:
-                xbmc.log(f'{__addonname__}:{exc_msg}', level=xbmc.LOGDEBUG)
-            monitor.waitForAbort(UPDATE_INTERVAL)
+                xbmc.log(f'{__addonname__}: exc message {exc_msg}',
+                            level=xbmc.LOGDEBUG)
+                monitor.waitForAbort(UPDATE_INTERVAL)
 
     def notify_msg(self,mss: str):
         """Shows a Kodi notification dialog using JSON-RPC

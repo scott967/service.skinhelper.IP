@@ -23,3 +23,12 @@ msgstr ""
 msgctxt "#32002"
 msgid "Update Interval"
 msgstr ""
+
+msgctxt "#32003"
+msgid "OHM Port"
+msgstr ""
+
+msgctxt "#32004"
+msgid "Select OHM sensors to monitor"
+msgstr ""
+

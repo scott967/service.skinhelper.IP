@@ -13,6 +13,18 @@
 					</constraints>
 					<control type="slider" format="integer"/>
 				</setting>
+				<setting label="32003" type="integer" id="OHM_port">
+					<level>1</level>
+					<default>9900</default>
+					<control type="edit" format="integer">
+						<heading>32003</heading>
+					</control>
+				</setting>
+				<setting  label="32004"  type="boolean" id="get_sensors" help="">
+					<level>1</level>
+					<default>false</default>
+					<control type="toggle"/>
+				</setting>
 			</group>
 		</category>
 	</section>
