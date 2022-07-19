@@ -22,6 +22,8 @@ __addon_id__            = __addon__.getAddonInfo('id')
 __addonname__           = __addon__.getAddonInfo('name')
 __icon__                = __addon__.getAddonInfo('icon')
 __addonpath__           = xbmcvfs.translatePath(__addon__.getAddonInfo('path'))
+__addonprofile__        = xbmcvfs.translatePath(__addon__.getAddonInfo('profile'))
+xbmc.log(f'{__addonname__}: profile path: {__addonprofile__}', level=xbmc.LOGDEBUG)
 WINDOW = xbmcgui.Window(10000)
 UPDATE_INTERVAL = __addon__.getSettingInt('update_interval')
 OHM_PORT = __addon__.getSettingInt('OHM_port')
@@ -48,10 +50,10 @@ class MyAddon:
         """
         monitor = MyMonitor()
         GET_SENSORS = __addon__.getSettingBool('get_sensors')
-        if GET_SENSORS or not os.path.exists(os.path.join(__addonpath__, 'sensorlist.json')):
+        if GET_SENSORS or not os.path.exists(os.path.join(__addonprofile__, 'sensorlist.json')):
             self.update_sensors()
             __addon__.setSettingBool('get_sensors', False)
-        with open(os.path.join(__addonpath__, 'sensorlist.json'), 'rb') as json_sensor:
+        with open(os.path.join(__addonprofile__, 'sensorlist.json'), 'rb') as json_sensor:
             activesensorlist = json.load(json_sensor)
 
         wip = self.get_wan_ip()
@@ -68,7 +70,7 @@ class MyAddon:
         monitored sensors are saved to sensorlist.json as a serialized list of sensor ids,
         """
         try:
-            with open(os.path.join(__addonpath__, 'sensorlist.json'), 'w') as json_sensor:
+            with open(os.path.join(__addonprofile__, 'sensorlist.json'), 'w') as json_sensor:
                 url = f"http://127.0.0.1:{OHM_PORT}/data.json"
                 with urllib.request.urlopen(url) as page:
                     data = page.read().decode('utf-8')
@@ -154,7 +156,7 @@ class MyAddon:
             except Exception as exc_msg:
                 xbmc.log(f'{__addonname__}: exc message {exc_msg}',
                             level=xbmc.LOGDEBUG)
-                monitor.waitForAbort(UPDATE_INTERVAL)
+            monitor.waitForAbort(UPDATE_INTERVAL)
 
     def notify_msg(self,mss: str):
         """Shows a Kodi notification dialog using JSON-RPC
