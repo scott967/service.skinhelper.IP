@@ -55,7 +55,6 @@ class MyAddon:
             __addon__.setSettingBool('get_sensors', False)
         with open(os.path.join(__addonprofile__, 'sensorlist.json'), 'rb') as json_sensor:
             activesensorlist = json.load(json_sensor)
-
         wip = self.get_wan_ip()
         lanip = self.get_system_ip()
         xbmc.log(f"{__addonname__} ---->WANIP:{wip}", level=xbmc.LOGINFO)
@@ -106,7 +105,7 @@ class MyAddon:
         except Exception as ex:
             self.notify_msg(f'{ex}')
 
-    def traverse_tree(self, tree: dict, sensorlist: list) -> list:
+    def traverse_tree(self, tree: dict, sensorlist: list, parent_text = '') -> list:
         """traverses over the OHM sensor tree dict to retrieve sensor id, text,
         and value for each node
 
@@ -118,13 +117,15 @@ class MyAddon:
             list: the updated sensor list
         """
         if tree['Children'] == []:
-            node = {'id':tree['id'], 'Text':tree['Text'], 'Value':tree['Value']}
+            node = {'id':tree['id'], 'Text':(parent_text + tree['Text']), 'Value':tree['Value']}
             sensorlist.append(node)
             #xbmc.log(f'{__addonname__}: node {node} type {type(sensorlist)} sensors: {len(sensorlist)} {sensorlist}', level=xbmc.LOGDEBUG)
             return sensorlist
         else:
+            parent_text = tree.get('Text', '') + ' - '
+            #xbmc.log(f'{__addonname__}: parent text {parent_text}', level=xbmc.LOGDEBUG)
             for child in tree['Children']:
-                sensorlist = self.traverse_tree(child, sensorlist)
+                sensorlist = self.traverse_tree(child, sensorlist, parent_text)
             return sensorlist
 
     def runner(self, monitor, activesensorlist):
