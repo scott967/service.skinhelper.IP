@@ -27,6 +27,8 @@ xbmc.log(f'{__addonname__}: profile path: {__addonprofile__}', level=xbmc.LOGDEB
 WINDOW = xbmcgui.Window(10000)
 UPDATE_INTERVAL = __addon__.getSettingInt('update_interval')
 OHM_PORT = __addon__.getSettingInt('OHM_port')
+SHORT_VALUE = __addon__.getSettingBool('Short_value')
+ENABLE_DEBUG = __addon__.getSettingBool('Enable_debug')
 
 class MyMonitor(xbmc.Monitor):
     """Wraps Kodi Monitor class to monitor settings
@@ -39,8 +41,12 @@ class MyMonitor(xbmc.Monitor):
         """updates the update interval when user changes the setting"""
         global UPDATE_INTERVAL
         global OHM_PORT
+        global SHORT_VALUE
+        global ENABLE_DEBUG
         UPDATE_INTERVAL = __addon__.getSettingInt('update_interval')
         OHM_PORT = __addon__.getSettingInt('OHM_port')
+        SHORT_VALUE = __addon__.getSettingBool('Short_value')
+        ENABLE_DEBUG = __addon__.getSettingBool('Enable_debug')
 
 class MyAddon:
     """class provides all the functions for the addon
@@ -80,7 +86,8 @@ class MyAddon:
                 for sensor in sensorlist:
                     new_sensor = f'id {sensor["id"]} -- {sensor["Text"]}'
                     sensorlist_as_string.append(new_sensor)
-                xbmc.log(f'{__addonname__}: update num sensors: {len(sensorlist)} sensorlist {sensorlist}', level=xbmc.LOGDEBUG)
+                if ENABLE_DEBUG:
+                    xbmc.log(f'{__addonname__}: update num sensors: {len(sensorlist)} sensorlist {sensorlist}', level=xbmc.LOGDEBUG)
                 active_sensors_index = xbmcgui.Dialog().multiselect(
                                         __addon__.getLocalizedString(32004),
                                         sensorlist_as_string)
@@ -144,14 +151,19 @@ class MyAddon:
                 #xbmc.log(f'{__addonname__}: data2 {data2}', level=xbmc.LOGDEBUG)
                 sensorlist = []
                 sensorlist = self.traverse_tree(data2, sensorlist)
-                xbmc.log(f'{__addonname__}: runner sensorlist {sensorlist} activesensorlist {activesensorlist}', level=xbmc.LOGDEBUG)
+                if ENABLE_DEBUG:
+                    xbmc.log(f'{__addonname__}: runner sensorlist {sensorlist} activesensorlist {activesensorlist}', level=xbmc.LOGDEBUG)
                 sensordata = []
                 for id_sensor in activesensorlist:
                     for index in sensorlist:
                         if index['id'] == id_sensor:
-                            sensordata.append(f'{index["Text"]} {index["Value"]}')
-                xbmc.log(f'{__addonname__}: sensordata {sensordata}',
-                            level=xbmc.LOGDEBUG)
+                            if SHORT_VALUE:
+                                sensordata.append(f'{index["Value"]}')
+                            else:
+                                sensordata.append(f'{index["Text"]} {index["Value"]}')
+                if ENABLE_DEBUG:
+                    xbmc.log(f'{__addonname__}: sensordata {sensordata}',
+                                level=xbmc.LOGDEBUG)
                 for count, sensor_value in enumerate(sensordata):
                     WINDOW.setProperty(f'SkinHelperIP.sensor{count}', sensor_value)
             except Exception as exc_msg:

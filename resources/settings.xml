@@ -4,7 +4,7 @@
 		<category id="General" label="32001">
 			<group id="1">
 				<setting label="32002" type="integer" id="update_interval">
-					<level>1</level>
+					<level>0</level>
 					<default>10</default>
 					<constraints>
 						<minimum>5</minimum>
@@ -14,14 +14,24 @@
 					<control type="slider" format="integer"/>
 				</setting>
 				<setting label="32003" type="integer" id="OHM_port">
-					<level>1</level>
+					<level>0</level>
 					<default>9900</default>
 					<control type="edit" format="integer">
 						<heading>32003</heading>
 					</control>
 				</setting>
 				<setting  label="32004"  type="boolean" id="get_sensors" help="">
-					<level>1</level>
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+				</setting>
+				<setting  label="32005"  type="boolean" id="Short_value" help="">
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+				</setting>
+				<setting  label="32006"  type="boolean" id="Enable_debug" help="">
+					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>

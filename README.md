@@ -40,3 +40,10 @@ Available settings are:
     Select OHM sensors to monitor -- toggle to display the multi-delect dialog
         (requires Kodi restart -- bool default is true for first run or if
         sensorlist.json is missing, then false)
+    Use short values -- sets the value string for all monitored sensors
+        (bool default is false) -- default is to provide fully characterized value
+        such as "Termperatures - CPU Core #2 - 44.0°C".  When set to true, value will
+        be set to "44.0°C"
+    Enable debug logging -- enable addon debug logging
+        (bool default is false) -- when set to true addon will log raw data received 
+        from OHM when Kodi debug level ogging is enabled 
