@@ -29,6 +29,7 @@ UPDATE_INTERVAL = __addon__.getSettingInt('update_interval')
 OHM_PORT = __addon__.getSettingInt('OHM_port')
 SHORT_VALUE = __addon__.getSettingBool('Short_value')
 ENABLE_DEBUG = __addon__.getSettingBool('Enable_debug')
+UPDATE_FAILED = False
 
 class MyMonitor(xbmc.Monitor):
     """Wraps Kodi Monitor class to monitor settings
@@ -43,7 +44,10 @@ class MyMonitor(xbmc.Monitor):
         global OHM_PORT
         global SHORT_VALUE
         global ENABLE_DEBUG
+        global UPDATE_FAILED
         UPDATE_INTERVAL = __addon__.getSettingInt('update_interval')
+        if OHM_PORT != __addon__.getSettingInt('OHM_port'):
+            UPDATE_FAILED = False
         OHM_PORT = __addon__.getSettingInt('OHM_port')
         SHORT_VALUE = __addon__.getSettingBool('Short_value')
         ENABLE_DEBUG = __addon__.getSettingBool('Enable_debug')
@@ -110,7 +114,7 @@ class MyAddon:
                 data=page.read().decode('utf-8')
             return data
         except Exception as ex:
-            self.notify_msg(f'{ex}')
+            self.notify_msg(f'get api.ipify.org fail {ex}')
 
     def traverse_tree(self, tree: dict, sensorlist: list, parent_text = '') -> list:
         """traverses over the OHM sensor tree dict to retrieve sensor id, text,
@@ -142,6 +146,7 @@ class MyAddon:
             monitor (xbmc.Monitor): a monitor to check for exit
             activesensorlist (list): a list of int of 0-5 sensors to minitor
         """
+        global UPDATE_FAILED
         while not monitor.abortRequested():
             try:
                 url = f"http://127.0.0.1:{OHM_PORT}/data.json"
@@ -167,8 +172,11 @@ class MyAddon:
                 for count, sensor_value in enumerate(sensordata):
                     WINDOW.setProperty(f'SkinHelperIP.sensor{count}', sensor_value)
             except Exception as exc_msg:
-                xbmc.log(f'{__addonname__}: exc message {exc_msg}',
+                xbmc.log(f'{__addonname__}: runner exc message {exc_msg}',
                             level=xbmc.LOGDEBUG)
+                if not UPDATE_FAILED:
+                    UPDATE_FAILED = True
+                    self.notify_msg('Check OHM port assignment[CR]in settings')
             monitor.waitForAbort(UPDATE_INTERVAL)
 
     def notify_msg(self,mss: str):
@@ -177,9 +185,9 @@ class MyAddon:
         Args:
             mss (str): notification message text
         """
-        note = (f'{{"id":1,"jsonrpc":"2.0"'
+        note = (f'{{"id":1,"jsonrpc":"2.0", '
                 f'"method":"GUI.ShowNotification", '
-                f'"params":{{"title":"IP","message":"{mss}"}}}}')
+                f'"params":{{"title":"Skinhelper IP","message":"{mss}"}}}}')
         result = xbmc.executeJSONRPC(note)
 
     def get_system_ip(self) ->str:
