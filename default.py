@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """This module gets system hardware sensor data from OpenHardwareMonitorValues
 and sets home window properties with the sonsor data.  See OHMV documentation
-for possible senors to monitor.  Sonsors must be edited into the MyAddon class
+for possible senors to monitor.  Sensors must be edited into the MyAddon class
 __init__ constructor method
 """
 
@@ -63,8 +63,12 @@ class MyAddon:
         if GET_SENSORS or not os.path.exists(os.path.join(__addonprofile__, 'sensorlist.json')):
             self.update_sensors()
             __addon__.setSettingBool('get_sensors', False)
-        with open(os.path.join(__addonprofile__, 'sensorlist.json'), 'rb') as json_sensor:
-            activesensorlist = json.load(json_sensor)
+        try:
+            with open(os.path.join(__addonprofile__, 'sensorlist.json'), 'rb') as json_sensor:
+                activesensorlist = json.load(json_sensor)
+        except:
+            xbmcgui.Dialog().notification(__addonname__, 'You must create sensors to monitor and sensorlist.json file for this addon', xbmcgui.NOTIFICATION_WARNING, time=10000)
+            return
         wip = self.get_wan_ip()
         lanip = self.get_system_ip()
         xbmc.log(f"{__addonname__} ---->WANIP:{wip}", level=xbmc.LOGINFO)
